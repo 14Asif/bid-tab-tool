@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGAS — Bid Tab Analyser & Pricing Tool</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; font-size: 14px; }
+.header { background: #1e3a5f; color: white; padding: 18px 24px; display: flex; align-items: center; gap: 12px; }
+.header h1 { font-size: 18px; font-weight: 600; }
+.header p { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+.container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 24px; }
+.tab { padding: 10px 20px; cursor: pointer; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+.tab.active { color: #1e3a5f; border-bottom-color: #1e3a5f; }
+.tab:hover:not(.active) { color: #334155; background: #f1f5f9; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Upload zone */
+.upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 48px; text-align: center; background: white; cursor: pointer; transition: all 0.2s; }
+.upload-zone:hover, .upload-zone.drag { border-color: #2563eb; background: #eff6ff; }
+.upload-zone svg { margin-bottom: 12px; }
+.upload-zone h3 { font-size: 15px; font-weight: 600; color: #334155; margin-bottom: 6px; }
+.upload-zone p { font-size: 13px; color: #64748b; }
+.upload-btn { display: inline-block; margin-top: 16px; background: #1e3a5f; color: white; padding: 8px 20px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+#fileInput { display: none; }
+
+/* Status */
+.status { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 16px; margin: 16px 0; font-size: 13px; color: #1d4ed8; display: none; }
+.status.error { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+.status.success { background: #f0fdf4; border-color: #86efac; color: #166534; }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #bfdbfe; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Bid cards */
+.bid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-top: 20px; }
+.bid-card { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+.bid-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.bid-card h4 { font-size: 13px; font-weight: 600; color: #1e293b; }
+.bid-card .meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+.badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.badge-win { background: #dcfce7; color: #166534; }
+.badge-lose { background: #fee2e2; color: #991b1b; }
+.badge-scope { background: #fef3c7; color: #92400e; }
+.price-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+.price-table th { text-align: left; color: #64748b; font-weight: 500; padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }
+.price-table td { padding: 5px 6px; border-bottom: 1px solid #f8fafc; }
+.price-table tr.winner td { background: #f0fdf4; font-weight: 600; color: #166534; }
+.price-table tr.agas td { background: #eff6ff; }
+.win-flag { font-size: 10px; }
+
+/* Pricing tool */
+.pricing-form { background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 12px; font-weight: 500; color: #475569; }
+.form-group select, .form-group input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: white; }
+.form-group select:focus, .form-group input:focus { outline: none; border-color: #2563eb; }
+.suggest-btn { background: #1e3a5f; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 8px; width: 100%; }
+.suggest-btn:hover { background: #1e40af; }
+.pricing-result { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 16px; display: none; }
+.price-range { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+.price-box { text-align: center; padding: 12px; border-radius: 8px; }
+.price-box.low { background: #fef3c7; }
+.price-box.mid { background: #dcfce7; }
+.price-box.high { background: #fee2e2; }
+.price-box .label { font-size: 11px; font-weight: 500; color: #64748b; }
+.price-box .amount { font-size: 20px; font-weight: 700; margin: 4px 0; }
+.price-box.low .amount { color: #92400e; }
+.price-box.mid .amount { color: #166534; }
+.price-box.high .amount { color: #991b1b; }
+.price-box .note { font-size: 10px; color: #64748b; }
+.rationale { font-size: 12px; color: #475569; line-height: 1.6; }
+.rationale h5 { font-size: 12px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+
+/* Summary */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; }
+.stat-card .val { font-size: 24px; font-weight: 700; color: #1e3a5f; }
+.stat-card .lbl { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+/* Competitor table */
+.comp-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+.comp-table th { background: #1e3a5f; color: white; padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 500; }
+.comp-table td { padding: 9px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.comp-table tr:last-child td { border-bottom: none; }
+.comp-table tr:hover td { background: #f8fafc; }
+
+.empty-state { text-align: center; padding: 48px; color: #94a3b8; }
+.empty-state svg { margin-bottom: 12px; opacity: 0.4; }
+.section-title { font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 12px; }
+.hint { font-size: 12px; color: #64748b; background: #f8fafc; border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>AGAS — Bid Tab Analyser & Pricing Tool</h1>
+    <p>Upload historical bid tabs · AI extracts pricing data · Get competitive price suggestions</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('upload')">Upload Bid Tabs</div>
+    <div class="tab" onclick="switchTab('library')">Bid Library</div>
+    <div class="tab" onclick="switchTab('pricing')">Price Suggester</div>
+    <div class="tab" onclick="switchTab('competitors')">Competitor Analysis</div>
+  </div>
+
+  <!-- UPLOAD TAB -->
+  <div class="panel active" id="tab-upload">
+    <div class="hint">Upload PDF bid tabulations from past government bids. AI will extract the agency, date, product, all competitor prices, winner, and delivery days automatically.</div>
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <svg width="40" height="40" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" d="M12 16V8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M4 8V7a3 3 0 013-3h10a3 3 0 013 3v1"/>
+      </svg>
+      <h3>Drop bid tab PDFs here</h3>
+      <p>Or click to browse — supports multiple files at once</p>
+      <div class="upload-btn">Choose Files</div>
+    </div>
+    <input type="file" id="fileInput" multiple accept=".pdf" onchange="handleFiles(this.files)">
+    <div class="status" id="status"></div>
+
+    <div id="previewArea"></div>
+  </div>
+
+  <!-- LIBRARY TAB -->
+  <div class="panel" id="tab-library">
+    <div id="libraryContent">
+      <div class="empty-state">
+        <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <p>No bid tabs uploaded yet. Upload PDFs to build your library.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRICING TAB -->
+  <div class="panel" id="tab-pricing">
+    <div class="pricing-form">
+      <div class="section-title">Get AI Price Suggestion</div>
+      <div class="hint">Fill in the new bid details and AI will suggest a competitive price based on your historical bid tab data.</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Product Type</label>
+          <select id="pProductType">
+            <option value="">Select product...</option>
+            <option value="street banners">Street Banners</option>
+            <option value="pole banners">Pole Banners</option>
+            <option value="vinyl banners">Vinyl Banners</option>
+            <option value="fabric banners">Fabric Banners</option>
+            <option value="flags">Flags</option>
+            <option value="feather flags">Feather Flags</option>
+            <option value="decals">Decals</option>
+            <option value="promotional items">Promotional Items</option>
+            <option value="trade show displays">Trade Show Displays</option>
+            <option value="table covers">Table Covers</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Agency Type</label>
+          <select id="pAgencyType">
+            <option value="">Select agency...</option>
+            <option value="city">City / Municipality</option>
+            <option value="county">County</option>
+            <option value="state">State Agency</option>
+            <option value="lottery">State Lottery</option>
+            <option value="school district">School District</option>
+            <option value="university">University</option>
+            <option value="transit">Transit Authority</option>
+            <option value="airport">Airport</option>
+            <option value="housing">Housing Authority</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" id="pQty" placeholder="e.g. 50" min="1">
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <select id="pUnit">
+            <option value="each">Each</option>
+            <option value="lot">Lot</option>
+            <option value="set">Set</option>
+            <option value="linear ft">Linear Foot</option>
+            <option value="sq ft">Square Foot</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>State / Region</label>
+          <input type="text" id="pState" placeholder="e.g. Texas">
+        </div>
+        <div class="form-group">
+          <label>Estimated Budget (optional)</label>
+          <input type="number" id="pBudget" placeholder="Agency's stated budget if known">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label>Bid Description / Scope Notes</label>
+        <input type="text" id="pNotes" placeholder="e.g. installation included, specific material required, rush delivery">
+      </div>
+      <button class="suggest-btn" onclick="getSuggestion()">Get Price Suggestion</button>
+      <div class="pricing-result" id="pricingResult"></div>
+    </div>
+  </div>
+
+  <!-- COMPETITORS TAB -->
+  <div class="panel" id="tab-competitors">
+    <div id="competitorContent">
+      <div class="empty-state">
+        <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+        </svg>
+        <p>Upload bid tabs to see competitor analysis.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let bidLibrary = JSON.parse(localStorage.getItem('agas_bids') || '[]');
+
+// ── Pre-load the City of Austin bid tab we already analysed ──────────────
+if (bidLibrary.length === 0) {
+  bidLibrary = [{
+    id: 'austin_2021_banners',
+    filename: 'Bid_tab_banner.pdf (City of Austin)',
+    agency: 'City of Austin',
+    agencyType: 'city',
+    state: 'Texas',
+    date: '2021-01-29',
+    bidNumber: 'RFQ87008468JF',
+    product: 'Street Banners',
+    scope: 'Installation and Removal Services, Banners',
+    qty: 1,
+    unit: 'Lot',
+    bids: [
+      { vendor: 'Lewis Sign',   location: 'Buda, TX',    unitPrice: 13625, total: 13625, delivery: 21, winner: true  },
+      { vendor: 'ProGraphix',   location: 'Austin, TX',  unitPrice: 17225, total: 17225, delivery: 30, winner: false },
+      { vendor: 'Texas XPO',    location: 'Austin, TX',  unitPrice: 19677.50, total: 19677.50, delivery: 25, winner: false },
+      { vendor: 'Fast Signs',   location: 'Austin, TX',  unitPrice: 20490, total: 20490,  delivery: 14, winner: false },
+    ],
+    winnerPrice: 13625,
+    spread: '33%',
+    notes: '103 vendors solicited, 4 bids received. APD recommends award to Lewis Sign.',
+    agasMatch: true
+  }];
+  saveBids();
+}
+
+function saveBids() {
+  try { localStorage.setItem('agas_bids', JSON.stringify(bidLibrary)); } catch(e) {}
+}
+
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const ids = ['upload','library','pricing','competitors'];
+    t.classList.toggle('active', ids[i] === id);
+  });
+  document.querySelectorAll('.panel').forEach((p,i) => {
+    const ids = ['tab-upload','tab-library','tab-pricing','tab-competitors'];
+    p.classList.toggle('active', ids[i] === 'tab-'+id);
+  });
+  if (id === 'library') renderLibrary();
+  if (id === 'competitors') renderCompetitors();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+}
+
+async function handleFiles(files) {
+  for (const file of files) {
+    if (!file.name.endsWith('.pdf')) continue;
+    showStatus('processing', `Reading ${file.name}...`);
+    const text = await extractPDFText(file);
+    showStatus('processing', `Analysing ${file.name} with AI...`);
+    await analyseWithAI(file.name, text);
+  }
+}
+
+async function extractPDFText(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const pdf = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+        resolve(text.trim() || '[Image-based PDF — text extraction not possible. Please describe the bid manually.]');
+      } catch(err) {
+        resolve('[Could not extract text from PDF]');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function analyseWithAI(filename, text) {
+  const prompt = `You are a government procurement analyst. Analyse this bid tabulation and extract structured data.
+
+BID TAB TEXT:
+${text.substring(0, 8000)}
+
+Extract and return ONLY valid JSON in this exact format:
+{
+  "agency": "agency name",
+  "agencyType": "city|county|state|lottery|school|university|transit|airport|housing|other",
+  "state": "state name",
+  "date": "YYYY-MM-DD",
+  "bidNumber": "bid number",
+  "product": "short product name e.g. Street Banners",
+  "scope": "full scope description",
+  "qty": number,
+  "unit": "Each|Lot|Set|Linear Foot|Square Foot",
+  "bids": [
+    {"vendor": "name", "location": "city, state", "unitPrice": number, "total": number, "delivery": number, "winner": true/false}
+  ],
+  "winnerPrice": number,
+  "notes": "any important notes",
+  "agasMatch": true
+}
+
+If the text is unclear or image-based, make best estimates from any visible data. Always return valid JSON only, no other text.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const raw = data.content?.[0]?.text || '';
+
+    let parsed;
+    try {
+      const clean = raw.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch {
+      showStatus('error', `Could not parse AI response for ${filename}. Please check the PDF is a text-based bid tab.`);
+      return;
+    }
+
+    parsed.id = 'bid_' + Date.now();
+    parsed.filename = filename;
+    const bidCount = parsed.bids?.length || 0;
+    const spread = bidCount > 1 ? calculateSpread(parsed.bids) : 'N/A';
+    parsed.spread = spread;
+
+    bidLibrary.push(parsed);
+    saveBids();
+    showStatus('success', `✓ Extracted ${bidCount} competitor bids from ${filename} — added to library`);
+    renderPreview(parsed);
+  } catch (err) {
+    showStatus('error', `Error analysing ${filename}: ${err.message}`);
+  }
+}
+
+function calculateSpread(bids) {
+  const prices = bids.map(b => b.total || b.unitPrice).filter(Boolean);
+  if (prices.length < 2) return 'N/A';
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  return Math.round(((max - min) / min) * 100) + '%';
+}
+
+function renderPreview(bid) {
+  const area = document.getElementById('previewArea');
+  const winner = bid.bids?.find(b => b.winner);
+  const html = `
+    <div style="background:white;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:#1e293b">${bid.agency}</div>
+          <div style="font-size:12px;color:#64748b">${bid.product} · ${bid.date} · ${bid.bidNumber || ''}</div>
+        </div>
+        <span style="font-size:11px;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-weight:500">Added to library</span>
+      </div>
+      <table class="price-table">
+        <tr><th>Vendor</th><th>Location</th><th>Unit Price</th><th>Total</th><th>Delivery</th></tr>
+        ${(bid.bids||[]).map(b => `
+          <tr class="${b.winner?'winner':''}">
+            <td>${b.vendor} ${b.winner?'<span class="win-flag">✓ Winner</span>':''}</td>
+            <td>${b.location||''}</td>
+            <td>${b.unitPrice?'$'+b.unitPrice.toLocaleString():''}</td>
+            <td>${b.total?'$'+b.total.toLocaleString():''}</td>
+            <td>${b.delivery||''} days</td>
+          </tr>`).join('')}
+      </table>
+      ${bid.notes ? `<div style="font-size:11px;color:#64748b;margin-top:8px;padding:8px;background:#f8fafc;border-radius:4px">${bid.notes}</div>` : ''}
+    </div>`;
+  area.innerHTML = html + area.innerHTML;
+}
+
+function renderLibrary() {
+  const el = document.getElementById('libraryContent');
+  if (!bidLibrary.length) {
+    el.innerHTML = `<div class="empty-state"><p>No bid tabs uploaded yet.</p></div>`;
+    return;
+  }
+
+  const totalBids = bidLibrary.length;
+  const avgWin = bidLibrary.filter(b => b.winnerPrice).reduce((s,b) => s + b.winnerPrice, 0) / bidLibrary.filter(b => b.winnerPrice).length;
+  const agencies = [...new Set(bidLibrary.map(b => b.agency))].length;
+  const products = [...new Set(bidLibrary.map(b => b.product))].length;
+
+  el.innerHTML = `
+    <div class="summary-grid">
+      <div class="stat-card"><div class="val">${totalBids}</div><div class="lbl">Bid Tabs</div></div>
+      <div class="stat-card"><div class="val">${agencies}</div><div class="lbl">Agencies</div></div>
+      <div class="stat-card"><div class="val">${products}</div><div class="lbl">Product Types</div></div>
+      <div class="stat-card"><div class="val">$${Math.round(avgWin).toLocaleString()}</div><div class="lbl">Avg Winning Price</div></div>
+    </div>
+    <div class="section-title">All Bid Tabs</div>
+    <div class="bid-grid">
+      ${bidLibrary.map(bid => {
+        const winner = bid.bids?.find(b => b.winner);
+        return `
+          <div class="bid-card">
+            <div class="bid-card-header">
+              <div>
+                <div class="bid-card h4" style="font-size:13px;font-weight:600">${bid.agency}</div>
+                <div class="meta">${bid.product} · ${bid.date} · ${bid.state}</div>
+              </div>
+              <span class="badge badge-scope">${bid.bids?.length||0} bids</span>
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:8px">${bid.scope||''}</div>
+            <table class="price-table">
+              <tr><th>Vendor</th><th>Total</th><th>Days</th></tr>
+              ${(bid.bids||[]).map(b => `
+                <tr class="${b.winner?'winner':''}">
+                  <td>${b.vendor}${b.winner?' ✓':''}</td>
+                  <td>$${(b.total||b.unitPrice||0).toLocaleString()}</td>
+                  <td>${b.delivery||'—'}</td>
+                </tr>`).join('')}
+            </table>
+            <div style="font-size:11px;color:#94a3b8;margin-top:8px">Price spread: ${bid.spread||'—'}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function getSuggestion() {
+  const productType = document.getElementById('pProductType').value;
+  const agencyType = document.getElementById('pAgencyType').value;
+  const qty = document.getElementById('pQty').value;
+  const unit = document.getElementById('pUnit').value;
+  const state = document.getElementById('pState').value;
+  const budget = document.getElementById('pBudget').value;
+  const notes = document.getElementById('pNotes').value;
+
+  if (!productType || !agencyType || !qty) {
+    alert('Please fill in Product Type, Agency Type and Quantity');
+    return;
+  }
+
+  const result = document.getElementById('pricingResult');
+  result.style.display = 'block';
+  result.innerHTML = '<div class="spinner"></div> Analysing your bid library and generating price recommendation...';
+
+  const historyContext = bidLibrary.map(b => {
+    const winner = b.bids?.find(bid => bid.winner);
+    const prices = (b.bids||[]).map(bid => bid.total || bid.unitPrice);
+    return `- ${b.agency} (${b.agencyType}, ${b.state}), ${b.product}, Qty ${b.qty} ${b.unit}: Winner ${winner?.vendor||'?'} at $${winner?.total||'?'}, range $${Math.min(...prices)||'?'}–$${Math.max(...prices)||'?'}, delivery ${winner?.delivery||'?'} days`;
+  }).join('\n');
+
+  const prompt = `You are a government bid pricing expert for AGAS Manufacturing, a US supplier of flags, banners, decals, promotional products and event display materials.
+
+HISTORICAL BID DATA FROM OUR LIBRARY:
+${historyContext || 'No historical data yet — make estimates based on market knowledge'}
+
+NEW BID TO PRICE:
+- Product: ${productType}
+- Agency type: ${agencyType}
+- State: ${state}
+- Quantity: ${qty} ${unit}
+- Agency budget: ${budget ? '$'+budget : 'Not stated'}
+- Notes: ${notes || 'None'}
+
+Provide a pricing recommendation in this exact JSON format:
+{
+  "low": number,
+  "recommended": number,
+  "high": number,
+  "confidence": "High|Medium|Low",
+  "reasoning": "2-3 sentences explaining the recommendation",
+  "winStrategy": "1-2 sentences on how to position to win",
+  "riskFactors": "any risks to flag",
+  "deliveryDays": number
+}`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const raw = data.content?.[0]?.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const rec = JSON.parse(clean);
+
+    const confidenceColor = rec.confidence === 'High' ? '#166534' : rec.confidence === 'Medium' ? '#92400e' : '#991b1b';
+
+    result.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:#1e293b">Price Recommendation — ${productType}</div>
+        <span style="font-size:11px;font-weight:500;color:${confidenceColor};background:${confidenceColor}20;padding:2px 8px;border-radius:4px">
+          ${rec.confidence} Confidence
+        </span>
+      </div>
+      <div class="price-range">
+        <div class="price-box low">
+          <div class="label">Aggressive (to win)</div>
+          <div class="amount">$${rec.low?.toLocaleString()}</div>
+          <div class="note">Lowest realistic bid</div>
+        </div>
+        <div class="price-box mid">
+          <div class="label">Recommended</div>
+          <div class="amount">$${rec.recommended?.toLocaleString()}</div>
+          <div class="note">Best balance of win rate & margin</div>
+        </div>
+        <div class="price-box high">
+          <div class="label">Conservative</div>
+          <div class="amount">$${rec.high?.toLocaleString()}</div>
+          <div class="note">Full margin — risk of losing</div>
+        </div>
+      </div>
+      <div class="rationale">
+        <h5>Why this range</h5>
+        <p style="margin-bottom:8px">${rec.reasoning}</p>
+        <h5>How to position to win</h5>
+        <p style="margin-bottom:8px">${rec.winStrategy}</p>
+        ${rec.riskFactors ? `<h5>Risk factors</h5><p>${rec.riskFactors}</p>` : ''}
+        <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border-radius:6px;font-size:11px;color:#1d4ed8">
+          Suggested delivery commitment: ${rec.deliveryDays} business days
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:#94a3b8">
+        Based on ${bidLibrary.length} bid tab(s) in your library. Upload more bid tabs to improve accuracy.
+      </div>`;
+  } catch(err) {
+    result.innerHTML = `<div style="color:#dc2626">Error: ${err.message}</div>`;
+  }
+}
+
+function renderCompetitors() {
+  const el = document.getElementById('competitorContent');
+  if (!bidLibrary.length) {
+    el.innerHTML = `<div class="empty-state"><p>Upload bid tabs to see competitor analysis.</p></div>`;
+    return;
+  }
+
+  const competitors = {};
+  bidLibrary.forEach(bid => {
+    (bid.bids||[]).forEach(b => {
+      if (!competitors[b.vendor]) {
+        competitors[b.vendor] = { name: b.vendor, location: b.location, wins: 0, bids: 0, prices: [], deliveries: [] };
+      }
+      competitors[b.vendor].bids++;
+      if (b.winner) competitors[b.vendor].wins++;
+      if (b.total || b.unitPrice) competitors[b.vendor].prices.push(b.total || b.unitPrice);
+      if (b.delivery) competitors[b.vendor].deliveries.push(b.delivery);
+    });
+  });
+
+  const rows = Object.values(competitors)
+    .sort((a, b) => b.wins - a.wins)
+    .map(c => {
+      const avgPrice = c.prices.length ? Math.round(c.prices.reduce((s,p)=>s+p,0)/c.prices.length) : 0;
+      const avgDel = c.deliveries.length ? Math.round(c.deliveries.reduce((s,d)=>s+d,0)/c.deliveries.length) : 0;
+      const winRate = Math.round((c.wins / c.bids) * 100);
+      return `<tr>
+        <td style="font-weight:500">${c.name}</td>
+        <td>${c.location||'—'}</td>
+        <td>${c.bids}</td>
+        <td><span style="color:${winRate>50?'#166534':'#64748b'};font-weight:${winRate>50?600:400}">${c.wins} (${winRate}%)</span></td>
+        <td>$${avgPrice.toLocaleString()}</td>
+        <td>${avgDel ? avgDel+' days' : '—'}</td>
+        <td>
+          ${winRate > 50 ? '<span style="font-size:11px;background:#fef2f2;color:#991b1b;padding:2px 6px;border-radius:4px">Strong competitor</span>' :
+            c.bids > 1 ? '<span style="font-size:11px;background:#f0fdf4;color:#166534;padding:2px 6px;border-radius:4px">Beatable</span>' :
+            '<span style="font-size:11px;background:#f8fafc;color:#64748b;padding:2px 6px;border-radius:4px">Limited data</span>'}
+        </td>
+      </tr>`;
+    }).join('');
+
+  el.innerHTML = `
+    <div class="section-title">Competitor Intelligence</div>
+    <div class="hint">Based on ${bidLibrary.length} bid tab(s). Upload more to improve accuracy.</div>
+    <table class="comp-table">
+      <thead><tr>
+        <th>Competitor</th><th>Location</th><th>Bids Seen</th><th>Wins</th><th>Avg Price</th><th>Avg Delivery</th><th>Threat Level</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.style.display = 'block';
+  el.className = `status ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`;
+  el.innerHTML = type === 'processing' ? `<span class="spinner"></span>${msg}` : msg;
+}
+</script>
+</body>
+</html>
