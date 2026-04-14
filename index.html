@@ -97,6 +97,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </head>
 <body>
 
+
+<div id="keyBanner" style="background:#fef3c7;border-bottom:1px solid #fcd34d;padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:13px;">
+  <span style="color:#92400e;font-weight:500">⚠ API Key required to use AI features</span>
+  <input type="password" id="apiKeyInput" placeholder="Paste your Anthropic API key here" 
+    style="flex:1;max-width:420px;padding:6px 10px;border:1px solid #fcd34d;border-radius:6px;font-size:13px;font-family:monospace">
+  <button onclick="saveApiKey()" style="background:#1e3a5f;color:white;border:none;padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer">Save Key</button>
+  <span id="keyStatus" style="font-size:12px;color:#64748b"></span>
+</div>
+
 <div class="header">
   <div>
     <h1>AGAS — Bid Tab Analyser & Pricing Tool</h1>
@@ -227,6 +236,40 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <script>
+function getApiKey() {
+  return localStorage.getItem('agas_api_key') || '';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    document.getElementById('keyStatus').textContent = '❌ Invalid key format';
+    document.getElementById('keyStatus').style.color = '#dc2626';
+    return;
+  }
+  localStorage.setItem('agas_api_key', key);
+  document.getElementById('keyStatus').textContent = '✅ Key saved';
+  document.getElementById('keyStatus').style.color = '#166534';
+  document.getElementById('keyBanner').style.background = '#f0fdf4';
+  document.getElementById('keyBanner').style.borderBottomColor = '#86efac';
+  setTimeout(() => {
+    document.getElementById('apiKeyInput').value = '';
+  }, 500);
+}
+
+function checkApiKey() {
+  const key = getApiKey();
+  if (key) {
+    document.getElementById('keyBanner').style.background = '#f0fdf4';
+    document.getElementById('keyBanner').style.borderBottomColor = '#86efac';
+    document.getElementById('keyStatus').textContent = '✅ Key loaded';
+    document.getElementById('keyStatus').style.color = '#166534';
+    const firstChars = key.substring(0, 20);
+    document.getElementById('keyStatus').textContent = '✅ Key active (' + firstChars + '...)';
+  }
+}
+
+
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let bidLibrary = JSON.parse(localStorage.getItem('agas_bids') || '[]');
@@ -429,10 +472,21 @@ Return this exact JSON structure:
 
 Set winner true for the awarded/lowest bid. Return raw JSON only, no markdown.`;
 
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    showStatus('error', '❌ Please enter your Anthropic API key in the banner above first.');
+    return;
+  }
+  const priceApiKey = getApiKey();
+  if (!priceApiKey) {
+    result.style.display = 'block';
+    result.innerHTML = '<div style="color:#dc2626;font-size:13px">❌ Please enter your Anthropic API key in the banner above first.</div>';
+    return;
+  }
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': '', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
@@ -622,7 +676,7 @@ Return ONLY this JSON (numbers only, no currency symbols, keep strings under 100
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': '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', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': '', 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
