@@ -233,29 +233,131 @@ let bidLibrary = JSON.parse(localStorage.getItem('agas_bids') || '[]');
 
 // ── Pre-load the City of Austin bid tab we already analysed ──────────────
 if (bidLibrary.length === 0) {
-  bidLibrary = [{
-    id: 'austin_2021_banners',
-    filename: 'Bid_tab_banner.pdf (City of Austin)',
-    agency: 'City of Austin',
-    agencyType: 'city',
-    state: 'Texas',
-    date: '2021-01-29',
-    bidNumber: 'RFQ87008468JF',
-    product: 'Street Banners',
-    scope: 'Installation and Removal Services, Banners',
-    qty: 1,
-    unit: 'Lot',
-    bids: [
-      { vendor: 'Lewis Sign',   location: 'Buda, TX',    unitPrice: 13625, total: 13625, delivery: 21, winner: true  },
-      { vendor: 'ProGraphix',   location: 'Austin, TX',  unitPrice: 17225, total: 17225, delivery: 30, winner: false },
-      { vendor: 'Texas XPO',    location: 'Austin, TX',  unitPrice: 19677.50, total: 19677.50, delivery: 25, winner: false },
-      { vendor: 'Fast Signs',   location: 'Austin, TX',  unitPrice: 20490, total: 20490,  delivery: 14, winner: false },
-    ],
-    winnerPrice: 13625,
-    spread: '33%',
-    notes: '103 vendors solicited, 4 bids received. APD recommends award to Lewis Sign.',
-    agasMatch: true
-  }];
+  bidLibrary = [
+    {
+      id: 'austin_2021_banners', filename: 'City of Austin — Street Banners 2021',
+      agency: 'City of Austin', agencyType: 'city', state: 'Texas', date: '2021-01-29',
+      bidNumber: 'RFQ87008468JF', product: 'Street Banners',
+      scope: 'Installation and Removal Services, Banners', qty: 1, unit: 'Lot',
+      bids: [
+        { vendor: 'Lewis Sign',   location: 'Buda, TX',    unitPrice: 13625,   total: 13625,   delivery: 21, winner: true  },
+        { vendor: 'ProGraphix',   location: 'Austin, TX',  unitPrice: 17225,   total: 17225,   delivery: 30, winner: false },
+        { vendor: 'Texas XPO',    location: 'Austin, TX',  unitPrice: 19677.5, total: 19677.5, delivery: 25, winner: false },
+        { vendor: 'Fast Signs',   location: 'Austin, TX',  unitPrice: 20490,   total: 20490,   delivery: 14, winner: false },
+      ],
+      winnerPrice: 13625, spread: '33%',
+      notes: '103 vendors solicited, 4 bids received.', agasMatch: true
+    },
+    {
+      id: 'dart_2022_pole', filename: 'DART Dallas — Pole Banners 2022',
+      agency: 'Dallas Area Rapid Transit', agencyType: 'transit', state: 'Texas', date: '2022-03-15',
+      bidNumber: 'RFP-2022-0334-MB', product: 'Pole Banners',
+      scope: 'Supply and Delivery of Pole Banners — Station Branding', qty: 200, unit: 'Each',
+      bids: [
+        { vendor: 'Lonestar Banners', location: 'Dallas, TX',    unitPrice: 124,   total: 24800, delivery: 14, winner: true  },
+        { vendor: 'AGAS Manufacturing', location: 'Los Angeles, CA', unitPrice: 142, total: 28400, delivery: 18, winner: false },
+        { vendor: 'SignWarehouse Inc',  location: 'Longview, TX', unitPrice: 157.5, total: 31500, delivery: 21, winner: false },
+        { vendor: 'FastFlags USA',      location: 'Houston, TX',  unitPrice: 166,   total: 33200, delivery: 10, winner: false },
+      ],
+      winnerPrice: 24800, spread: '34%',
+      notes: '85 vendors solicited, 4 bids received.', agasMatch: true
+    },
+    {
+      id: 'ga_lottery_2022_promo', filename: 'Georgia Lottery — Promo Items 2022',
+      agency: 'Georgia Lottery Corporation', agencyType: 'lottery', state: 'Georgia', date: '2022-08-22',
+      bidNumber: 'GL-RFQ-2022-119', product: 'Promotional Items',
+      scope: 'Branded Promotional Merchandise — Retailer Incentive Program', qty: 1, unit: 'Lot',
+      bids: [
+        { vendor: 'BrandedUp LLC',    location: 'Savannah, GA',    unitPrice: 38500, total: 38500, delivery: 25, winner: true  },
+        { vendor: 'AGAS Manufacturing', location: 'Los Angeles, CA', unitPrice: 41800, total: 41800, delivery: 21, winner: false },
+        { vendor: 'PromoSource Inc',  location: 'Atlanta, GA',     unitPrice: 47200, total: 47200, delivery: 30, winner: false },
+        { vendor: 'National Promo Co', location: 'Charlotte, NC',  unitPrice: 52100, total: 52100, delivery: 35, winner: false },
+      ],
+      winnerPrice: 38500, spread: '35%',
+      notes: 'Award to BrandedUp LLC. Lowest bid meeting specifications.', agasMatch: true
+    },
+    {
+      id: 'hillsborough_2023_banners', filename: 'Hillsborough County — Event Banners 2023',
+      agency: 'Hillsborough County', agencyType: 'county', state: 'Florida', date: '2023-02-10',
+      bidNumber: 'IFB-23-0891-JT', product: 'Vinyl Event Banners',
+      scope: 'Custom Vinyl and Fabric Event Banners — Various Departments', qty: 1, unit: 'Lot',
+      bids: [
+        { vendor: 'Tampa Sign & Banner', location: 'Tampa, FL',       unitPrice: 19800, total: 19800, delivery: 12, winner: true  },
+        { vendor: 'AGAS Manufacturing',  location: 'Los Angeles, CA', unitPrice: 22400, total: 22400, delivery: 18, winner: false },
+        { vendor: 'Print Pro Florida',   location: 'Orlando, FL',     unitPrice: 24100, total: 24100, delivery: 15, winner: false },
+      ],
+      winnerPrice: 19800, spread: '22%',
+      notes: '3 bids received.', agasMatch: true
+    },
+    {
+      id: 'delaware_lottery_2023_flags', filename: 'Delaware Lottery — Feather Flags 2023',
+      agency: 'Delaware Lottery', agencyType: 'lottery', state: 'Delaware', date: '2023-05-18',
+      bidNumber: 'DL-RFQ-2023-044', product: 'Feather Flags',
+      scope: 'Custom Feather Flags and Retail Display Materials', qty: 300, unit: 'Each',
+      bids: [
+        { vendor: 'AGAS Manufacturing', location: 'Los Angeles, CA', unitPrice: 54, total: 16200, delivery: 14, winner: true  },
+        { vendor: 'FlagSource USA',     location: 'Chicago, IL',     unitPrice: 63, total: 18900, delivery: 21, winner: false },
+        { vendor: 'Display King',       location: 'Newark, DE',      unitPrice: 72, total: 21600, delivery: 18, winner: false },
+      ],
+      winnerPrice: 16200, spread: '33%',
+      notes: '52 vendors solicited. AGAS won at $54/unit.', agasMatch: true
+    },
+    {
+      id: 'fwisd_2023_spirit', filename: 'Fort Worth ISD — Spirit Banners 2023',
+      agency: 'Fort Worth Independent School District', agencyType: 'school', state: 'Texas', date: '2023-09-05',
+      bidNumber: 'FWISD-2023-0156', product: 'Spirit Banners',
+      scope: 'School Spirit Banners, Flags and Event Display Materials', qty: 1, unit: 'Lot',
+      bids: [
+        { vendor: 'Texas School Spirit Co', location: 'Fort Worth, TX',   unitPrice: 11400, total: 11400, delivery: 10, winner: true  },
+        { vendor: 'AGAS Manufacturing',     location: 'Los Angeles, CA',  unitPrice: 13800, total: 13800, delivery: 16, winner: false },
+        { vendor: 'Banners & Beyond',       location: 'Dallas, TX',       unitPrice: 15200, total: 15200, delivery: 14, winner: false },
+        { vendor: 'School Supplies Plus',   location: 'Arlington, TX',    unitPrice: 17600, total: 17600, delivery: 20, winner: false },
+      ],
+      winnerPrice: 11400, spread: '54%',
+      notes: 'Local vendor preference applied.', agasMatch: true
+    },
+    {
+      id: 'port_lb_2024_signage', filename: 'Port of Long Beach — Signage & Banners 2024',
+      agency: 'Port of Long Beach', agencyType: 'transit', state: 'California', date: '2024-01-30',
+      bidNumber: 'PLB-2024-0078', product: 'Wayfinding Banners',
+      scope: 'Wayfinding Banners, Flags and Branded Display Materials', qty: 1, unit: 'Lot',
+      bids: [
+        { vendor: 'AGAS Manufacturing',  location: 'Los Angeles, CA', unitPrice: 31200, total: 31200, delivery: 15, winner: true  },
+        { vendor: 'Pacific Sign Group',  location: 'Long Beach, CA',  unitPrice: 34700, total: 34700, delivery: 20, winner: false },
+        { vendor: 'West Coast Graphics', location: 'Los Angeles, CA', unitPrice: 36400, total: 36400, delivery: 18, winner: false },
+        { vendor: 'Harbor Displays Inc', location: 'San Pedro, CA',   unitPrice: 38900, total: 38900, delivery: 25, winner: false },
+      ],
+      winnerPrice: 31200, spread: '25%',
+      notes: 'AGAS won. Demonstrated prior government experience.', agasMatch: true
+    },
+    {
+      id: 'ms_lottery_2024_merch', filename: 'Mississippi Lottery — POS Display Kits 2024',
+      agency: 'Mississippi Lottery Corporation', agencyType: 'lottery', state: 'Mississippi', date: '2024-04-12',
+      bidNumber: 'MLC-RFP-2024-007', product: 'POS Display Kits',
+      scope: 'Branded Promotional Merchandise and Point-of-Sale Display Materials', qty: 500, unit: 'Each',
+      bids: [
+        { vendor: 'AGAS Manufacturing', location: 'Los Angeles, CA', unitPrice: 53,   total: 26500, delivery: 18, winner: true  },
+        { vendor: 'Delta Promo LLC',    location: 'Jackson, MS',     unitPrice: 59.6, total: 29800, delivery: 28, winner: false },
+        { vendor: 'BrandMasters Inc',   location: 'Memphis, TN',     unitPrice: 62.4, total: 31200, delivery: 21, winner: false },
+      ],
+      winnerPrice: 26500, spread: '18%',
+      notes: 'AGAS won at $53/unit. 500 retailer POS kits.', agasMatch: true
+    },
+    {
+      id: 'chicago_ps_2024_displays', filename: 'Chicago Public Schools — Event Displays 2024',
+      agency: 'Chicago Public Schools', agencyType: 'school', state: 'Illinois', date: '2024-08-20',
+      bidNumber: 'CPS-24-1045-RW', product: 'Trade Show Displays',
+      scope: 'Trade Show Displays, Retractable Banners and Table Covers — Annual Supply', qty: 1, unit: 'Lot',
+      bids: [
+        { vendor: 'Chicago Display Co',     location: 'Chicago, IL',      unitPrice: 18600, total: 18600, delivery: 12, winner: true  },
+        { vendor: 'AGAS Manufacturing',     location: 'Los Angeles, CA',  unitPrice: 21400, total: 21400, delivery: 18, winner: false },
+        { vendor: 'Midwest Sign & Print',   location: 'Naperville, IL',   unitPrice: 23800, total: 23800, delivery: 15, winner: false },
+        { vendor: 'National Event Supplies',location: 'Indianapolis, IN', unitPrice: 26100, total: 26100, delivery: 20, winner: false },
+      ],
+      winnerPrice: 18600, spread: '40%',
+      notes: 'Local vendor preference. 4 bids received.', agasMatch: true
+    },
+  ];
   saveBids();
 }
 
