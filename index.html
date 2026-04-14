@@ -609,30 +609,15 @@ async function getSuggestion() {
     return `- ${b.agency} (${b.agencyType}, ${b.state}), ${b.product}, Qty ${b.qty} ${b.unit}: Winner ${winner?.vendor||'?'} at $${winner?.total||'?'}, range $${Math.min(...prices)||'?'}–$${Math.max(...prices)||'?'}, delivery ${winner?.delivery||'?'} days`;
   }).join('\n');
 
-  const prompt = `You are a government bid pricing expert for AGAS Manufacturing, a US supplier of flags, banners, decals, promotional products and event display materials.
+  const prompt = `Price this government bid for AGAS Manufacturing (flags, banners, promotional products). Return ONLY a JSON object.
 
-HISTORICAL BID DATA FROM OUR LIBRARY:
-${historyContext || 'No historical data yet — make estimates based on market knowledge'}
+HISTORY (${bidLibrary.length} bids):
+${historyContext || 'No data — use market estimates'}
 
-NEW BID TO PRICE:
-- Product: ${productType}
-- Agency type: ${agencyType}
-- State: ${state}
-- Quantity: ${qty} ${unit}
-- Agency budget: ${budget ? '$'+budget : 'Not stated'}
-- Notes: ${notes || 'None'}
+NEW BID: ${productType} | ${agencyType} | ${state} | Qty ${qty} ${unit} | Budget: ${budget ? '$'+budget : 'unknown'} | ${notes || ''}
 
-Provide a pricing recommendation in this exact JSON format:
-{
-  "low": number,
-  "recommended": number,
-  "high": number,
-  "confidence": "High|Medium|Low",
-  "reasoning": "2-3 sentences explaining the recommendation",
-  "winStrategy": "1-2 sentences on how to position to win",
-  "riskFactors": "any risks to flag",
-  "deliveryDays": number
-}`;
+Return ONLY this JSON (numbers only, no currency symbols, keep strings under 100 chars):
+{"low":0,"recommended":0,"high":0,"confidence":"High","reasoning":"brief reason","winStrategy":"brief strategy","riskFactors":"brief risks","deliveryDays":14}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -646,8 +631,16 @@ Provide a pricing recommendation in this exact JSON format:
     });
     const data = await response.json();
     const raw = data.content?.[0]?.text || '';
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const rec = JSON.parse(clean);
+    let clean = raw.replace(/```json|```/g, '').trim();
+    const ps = clean.indexOf('{');
+    const pe = clean.lastIndexOf('}');
+    if (ps !== -1 && pe !== -1) clean = clean.substring(ps, pe + 1);
+    let rec;
+    const repairs = [clean, clean+'}', clean+'"}', clean+',"deliveryDays":14}'];
+    for (const r of repairs) {
+      try { rec = JSON.parse(r); break; } catch(e) {}
+    }
+    if (!rec) throw new Error('Could not parse pricing response — please try again');
 
     const confidenceColor = rec.confidence === 'High' ? '#166534' : rec.confidence === 'Medium' ? '#92400e' : '#991b1b';
 
